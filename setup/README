@@ -1,1 +1,12 @@
 THIS DIR helps in setting up the db schema
+
+All the db schema files should go in db_schema directory
+
+Naming Convention to be followed:
+1. Name the files
+  <table-name>.table.php
+  eg. users.table.php <-- File which creates users table
+2. Each file should have a class where 
+  ClassName == ucfirst ( <table-name> )
+  eg. class Users {} <-- should be present in users.table.php
+3. These classes should implement 'create' & 'destroy' method. Both methods must be public
