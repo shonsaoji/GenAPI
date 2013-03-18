@@ -3,7 +3,7 @@
 # Date   : Aug 25, 12
 # Time   : 10:55 am 
 
-# API to publish & get blobs
+# API to post & get data
 # GET
 # URI FORMAT : /model/action/id
 
@@ -18,13 +18,15 @@ require_once dirname(__FILE__) . '/env.inc.php';
 # ---
 
 $path   = $_GET['path'];
-$method = $_SERVER['REQUEST_METHOD']; 
+
+$method = $_SERVER['REQUEST_METHOD'];
 
 $req = new GenAPI($path, $method);
 $req->handle();
 
 
 class GenAPI {
+	
 	private $path;
 	private $method;
 	private $model;
@@ -85,28 +87,31 @@ class GenAPI {
 		$response['message'] = $this->response_msg;
 		$response['code'] = $this->response_code;
 		$response['format'] = $this->response_format;
-		die(json_encode($response)); 
+		die(json_encode($response));
 	}
-	
 	
 	/*
 	 * Request Handler
 	 */
 	private function process_request() {
+		$obj = false;
 		if(strcasecmp($this->method, "post") == 0) {
 			# Post Request
 			$obj = $this->process_post_request();
 		} else {
 			# Get Request
 			$obj = $this->process_get_request();
-			if($obj) {
-				$this->response_msg = json_encode($obj);
-				$this->response_code = 200;
-				$this->response_format = 'json';
-			} else {
-				$this->response_code = 500;
-				$this->response_msg = "Something went wrong";
-			}
+		}
+
+		# Generate Response
+		if($obj === false || $obj === null) {
+			$this->response_code = 500;
+			$this->response_msg = isset($_SESSION['error_flash']) ? $_SESSION['error_flash'] : "Something went wrong";
+			$_SESSION['error_flash'] = "";
+		} else {
+			$this->response_msg = $obj;
+			$this->response_code = 200;
+			$this->response_format = 'json';
 		}
 	}
 	
@@ -119,19 +124,20 @@ class GenAPI {
 		$class_name = ucfirst($this->model);
 		
 		try {
-			$obj = @call_user_func_array(array(new $class_name, $this->action), $this->id);
+			$obj = call_user_func_array(array(new $class_name, $this->action), array($this->id));
 		} catch (Exception $e) {
 			error_log(__METHOD__ . "Caught Exception\n");
 		}
-		
-		
 		return $obj;
 	}
 	
 	private function process_post_request() {
+		
+		$blob = null;
 		if(!isset($_POST['blob'])) {
 			$this->response_code = 500;
 			$this->response_msg = "'blob' post parameter must be set. check readme for the api";
+			error_log(__METHOD__ . " 'blob' post parameter must be set. check readme for the api");
 			return;
 		} else {
 			$blob = $_POST['blob'];
@@ -144,8 +150,8 @@ class GenAPI {
 		}
 		
 		$class_name = ucfirst($this->model);
-		
-		$obj = @call_user_func_array(array(new $class_name, $this->action), array($blob, $format));
+		$obj = call_user_func_array(array($class_name, 'process_post_request'), array($this->action, $blob, $format));
+		return $obj;
 	}
 	
 }
